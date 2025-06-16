@@ -1,0 +1,42 @@
+{
+  "name": "antarwell-website",
+  "version": "1.0.0",
+  "description": "AntarWell - Every Mind Matters: A modern website for life skills education and mental health support",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve .",
+    "dev": "npx live-server .",
+    "build": "echo 'No build process needed for static site'",
+    "deploy": "echo 'Ready for deployment to static hosting'",
+    "validate": "npx html-validate index.html"
+  },
+  "keywords": [
+    "life-skills",
+    "mental-health",
+    "education",
+    "personal-development",
+    "wellness",
+    "stage-fear",
+    "confidence-building"
+  ],
+  "author": "AntarWell Team",
+  "license": "MIT",
+  "homepage": "https://antarwell.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/antarwell/website.git"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.2",
+    "html-validate": "^8.7.4",
+    "serve": "^14.2.1"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ],
+  "engines": {
+    "node": ">=14.0.0"
+  }
+} 
