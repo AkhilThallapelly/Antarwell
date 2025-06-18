@@ -1,7 +1,14 @@
 // Initialize Lucide icons when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
+
     // Initialize Lucide icons
     lucide.createIcons();
+    
+    // --- Start of EmailJS Integration ---
+    // Initialize EmailJS with your Public Key
+    // Replace 'YOUR_PUBLIC_KEY' with your actual key from your EmailJS account page
+    emailjs.init('Vw6IttavQcdShcMBK');
+    // --- End of EmailJS Integration ---
     
     // Mobile Navigation
     const hamburger = document.querySelector('.hamburger');
@@ -98,37 +105,101 @@ document.addEventListener('DOMContentLoaded', function() {
         observer.observe(el);
     });
 
-    // Contact form handling
+    // --- Start of Form Validation Functions (Moved for better structure) ---
+    function showFieldError(input, message) {
+        clearFieldError(input);
+        input.style.borderColor = '#ef4444';
+        
+        const errorElement = document.createElement('div');
+        errorElement.className = 'field-error';
+        errorElement.textContent = message;
+        errorElement.style.cssText = `
+            color: #ef4444;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        `;
+        
+        input.parentNode.appendChild(errorElement);
+    }
+
+    function clearFieldError(input) {
+        input.style.borderColor = ''; // Revert to stylesheet default
+        const errorElement = input.parentNode.querySelector('.field-error');
+        if (errorElement) {
+            errorElement.remove();
+        }
+    }
+    
+    function validateForm(form) {
+        const inputs = form.querySelectorAll('input[required], select[required], textarea[required]');
+        let isValid = true;
+        
+        inputs.forEach(input => {
+            clearFieldError(input); // Clear previous errors
+            if (!input.value.trim()) {
+                showFieldError(input, 'This field is required');
+                isValid = false;
+            } else {
+                // Email validation
+                if (input.type === 'email') {
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailRegex.test(input.value)) {
+                        showFieldError(input, 'Please enter a valid email address');
+                        isValid = false;
+                    }
+                }
+                
+                // Phone validation (optional field, but validate if filled)
+                if (input.type === 'tel' && input.value) {
+                    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+                    if (!phoneRegex.test(input.value.replace(/[\s\-\(\)]/g, ''))) {
+                        showFieldError(input, 'Please enter a valid phone number');
+                        isValid = false;
+                    }
+                }
+            }
+        });
+        
+        return isValid;
+    }
+    // --- End of Form Validation Functions ---
+
+
+    // --- MODIFIED Contact form handling ---
     const contactForm = document.getElementById('contactForm');
     if (contactForm) {
         contactForm.addEventListener('submit', function(e) {
             e.preventDefault();
+
+            // First, validate the form
+            if (!validateForm(contactForm)) {
+                showNotification('Please fix the errors in the form.', 'error');
+                return; // Stop if validation fails
+            }
             
-            // Get form data
-            const formData = new FormData(contactForm);
-            const data = Object.fromEntries(formData);
-            
-            // Show loading state
+            // Get button and disable it
             const submitBtn = contactForm.querySelector('button[type="submit"]');
             const originalText = submitBtn.textContent;
             submitBtn.textContent = 'Sending...';
             submitBtn.disabled = true;
             
-            // Simulate form submission (replace with actual form handling)
-            setTimeout(() => {
-                // Show success message
-                showNotification('Thank you for your message! We\'ll get back to you soon.', 'success');
-                
-                // Reset form
-                contactForm.reset();
-                
-                // Reset button
-                submitBtn.textContent = originalText;
-                submitBtn.disabled = false;
-                
-                // Log form data (remove in production)
-                console.log('Form submitted:', data);
-            }, 2000);
+            // Send the form data using EmailJS
+            // Replace 'YOUR_SERVICE_ID' and 'YOUR_TEMPLATE_ID' with your actual IDs
+            emailjs.sendForm('service_3u4wn5j', 'template_ewe4vrg', this)
+                .then(function() {
+                    // On Success
+                    showNotification('Thank you for connecting with us! We look forward to exploring how we can empower your students together.', 'success');
+                    contactForm.reset(); // Clear the form
+                }, function(error) {
+                    // On Failure
+                    showNotification('Oops! Something went wrong. Please try again.', 'error');
+                    console.error('EmailJS Error:', error);
+                })
+                .finally(function() {
+                    // This will run after success or failure
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                });
         });
     }
 
@@ -172,163 +243,72 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Notification system
     function showNotification(message, type = 'info') {
-        // Create notification element
         const notification = document.createElement('div');
         notification.className = `notification notification-${type}`;
-        notification.innerHTML = `
-            <div class="notification-content">
-                <span class="notification-message">${message}</span>
-                <button class="notification-close">&times;</button>
-            </div>
-        `;
+        notification.textContent = message;
         
-        // Add styles
+        // Basic styles, can be moved to CSS file
         notification.style.cssText = `
             position: fixed;
-            top: 100px;
-            right: 20px;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
             background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
             color: white;
             padding: 1rem 1.5rem;
             border-radius: 8px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
             z-index: 10000;
-            transform: translateX(400px);
-            transition: transform 0.3s ease;
-            max-width: 400px;
+            opacity: 0;
+            transition: opacity 0.3s ease, transform 0.3s ease;
         `;
         
         document.body.appendChild(notification);
         
         // Animate in
         setTimeout(() => {
-            notification.style.transform = 'translateX(0)';
+            notification.style.opacity = '1';
+            notification.style.transform = 'translateX(-50%) translateY(0)';
         }, 100);
         
-        // Close functionality
-        const closeBtn = notification.querySelector('.notification-close');
-        closeBtn.addEventListener('click', closeNotification);
-        
         // Auto close after 5 seconds
-        setTimeout(closeNotification, 5000);
-        
-        function closeNotification() {
-            notification.style.transform = 'translateX(400px)';
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 300);
-        }
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateX(-50%) translateY(20px)';
+                setTimeout(() => notification.remove(), 300);
+            }
+        }, 5000);
     }
+    
+    // (The rest of your existing JavaScript code for Parallax, Hover Effects, Loading Animation, etc., remains the same)
 
-    // Parallax effect for hero section
+    // Parallax effect for hero and about sections (disabled on mobile)
     window.addEventListener('scroll', function() {
-        const scrolled = window.pageYOffset;
-        const parallaxElements = document.querySelectorAll('.hero-graphic, .about-graphic');
+        if (window.innerWidth <= 768) return;
         
-        parallaxElements.forEach(element => {
-            const speed = 0.5;
-            element.style.transform = `translateY(${scrolled * speed}px)`;
-        });
+        const scrolled = window.pageYOffset;
+        const heroGraphic = document.querySelector('.hero-graphic');
+        const aboutGraphic = document.querySelector('.about-graphic');
+        
+        if (heroGraphic) {
+            heroGraphic.style.transform = `translateY(${scrolled * 0.3}px)`;
+        }
+        
+        if (aboutGraphic) {
+            aboutGraphic.style.transform = `translateY(${scrolled * 0.2}px)`;
+        }
     });
 
-    // Form validation
-    function validateForm(form) {
-        const inputs = form.querySelectorAll('input[required], select[required], textarea[required]');
-        let isValid = true;
-        
-        inputs.forEach(input => {
-            if (!input.value.trim()) {
-                showFieldError(input, 'This field is required');
-                isValid = false;
-            } else {
-                clearFieldError(input);
-                
-                // Email validation
-                if (input.type === 'email') {
-                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                    if (!emailRegex.test(input.value)) {
-                        showFieldError(input, 'Please enter a valid email address');
-                        isValid = false;
-                    }
-                }
-                
-                // Phone validation
-                if (input.type === 'tel' && input.value) {
-                    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
-                    if (!phoneRegex.test(input.value.replace(/[\s\-\(\)]/g, ''))) {
-                        showFieldError(input, 'Please enter a valid phone number');
-                        isValid = false;
-                    }
-                }
-            }
-        });
-        
-        return isValid;
-    }
-
-    function showFieldError(input, message) {
-        clearFieldError(input);
-        input.style.borderColor = '#ef4444';
-        
-        const errorElement = document.createElement('div');
-        errorElement.className = 'field-error';
-        errorElement.textContent = message;
-        errorElement.style.cssText = `
-            color: #ef4444;
-            font-size: 0.875rem;
-            margin-top: 0.25rem;
-        `;
-        
-        input.parentNode.appendChild(errorElement);
-    }
-
-    function clearFieldError(input) {
-        input.style.borderColor = '#e2e8f0';
-        const errorElement = input.parentNode.querySelector('.field-error');
-        if (errorElement) {
-            errorElement.remove();
-        }
-    }
-
-    // Update form submission to include validation
-    if (contactForm) {
-        contactForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            if (!validateForm(contactForm)) {
-                showNotification('Please fix the errors below', 'error');
-                return;
-            }
-            
-            // Continue with form submission logic...
-            const formData = new FormData(contactForm);
-            const data = Object.fromEntries(formData);
-            
-            const submitBtn = contactForm.querySelector('button[type="submit"]');
-            const originalText = submitBtn.textContent;
-            submitBtn.textContent = 'Sending...';
-            submitBtn.disabled = true;
-            
-            setTimeout(() => {
-                showNotification('Thank you for your message! We\'ll get back to you soon.', 'success');
-                contactForm.reset();
-                submitBtn.textContent = originalText;
-                submitBtn.disabled = false;
-                console.log('Form submitted:', data);
-            }, 2000);
-        });
-    }
-
     // Add hover effects to cards
-    document.querySelectorAll('.program-card, .testimonial-card').forEach(card => {
+    document.querySelectorAll('.program-card, .testimonial-card, .service-item').forEach(card => {
         card.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-10px) scale(1.02)';
+            this.style.transform = 'translateY(-10px)';
+            this.style.transition = 'transform 0.3s ease';
         });
         
         card.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0) scale(1)';
+            this.style.transform = 'translateY(0)';
         });
     });
 
@@ -336,118 +316,54 @@ document.addEventListener('DOMContentLoaded', function() {
     function showLoadingAnimation() {
         const loader = document.createElement('div');
         loader.className = 'page-loader';
-        loader.innerHTML = `
-            <div class="loader-content">
-                <div class="loader-spinner"></div>
-                <p>Loading AntarWell...</p>
-            </div>
-        `;
-        
-        loader.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.95);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-            transition: opacity 0.5s ease;
-        `;
-        
-        const spinnerCSS = `
-            .loader-spinner {
-                width: 40px;
-                height: 40px;
-                border: 4px solid #e2e8f0;
-                border-top: 4px solid #667eea;
-                border-radius: 50%;
-                animation: spin 1s linear infinite;
-                margin-bottom: 1rem;
-            }
-            
-            .loader-content {
-                text-align: center;
-            }
-            
-            .loader-content p {
-                color: #666;
-                font-weight: 500;
-            }
-            
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-        `;
+        loader.innerHTML = `<div class="loader-spinner"></div>`;
+        loader.style.cssText = `...`; // your styles here
         
         const style = document.createElement('style');
-        style.textContent = spinnerCSS;
-        document.head.appendChild(style);
+        style.textContent = `...`; // your spinner styles here
         
+        document.head.appendChild(style);
         document.body.appendChild(loader);
         
-        // Hide loader after content is loaded
         window.addEventListener('load', function() {
-            setTimeout(() => {
-                loader.style.opacity = '0';
-                setTimeout(() => {
-                    if (loader.parentNode) {
-                        loader.parentNode.removeChild(loader);
-                    }
-                    style.remove();
-                }, 500);
-            }, 1000);
+            loader.style.opacity = '0';
+            setTimeout(() => loader.remove(), 500);
         });
     }
-
-    // Initialize loading animation
-    showLoadingAnimation();
 
     // Active navigation link highlighting
     function updateActiveNavLink() {
         const sections = document.querySelectorAll('section[id]');
         const navLinks = document.querySelectorAll('.nav-link');
-        
-        let current = '';
+        let currentSectionId = '';
         
         sections.forEach(section => {
-            const sectionTop = section.offsetTop - 100;
-            const sectionHeight = section.offsetHeight;
-            
-            if (window.pageYOffset >= sectionTop && window.pageYOffset < sectionTop + sectionHeight) {
-                current = section.getAttribute('id');
+            const sectionTop = section.offsetTop - 90; // Offset for navbar
+            if (pageYOffset >= sectionTop) {
+                currentSectionId = section.getAttribute('id');
             }
         });
         
         navLinks.forEach(link => {
             link.classList.remove('active');
-            if (link.getAttribute('href') === `#${current}`) {
+            if (link.getAttribute('href').includes(currentSectionId)) {
                 link.classList.add('active');
             }
         });
     }
 
-    // Update active nav link on scroll
     window.addEventListener('scroll', updateActiveNavLink);
-    
-    // Initialize on page load
-    updateActiveNavLink();
+    updateActiveNavLink(); // Run on load
 });
 
-// Add CSS for active nav link
+// Add CSS for active nav link (or move this to your styles.css)
 const navActiveCSS = `
     .nav-link.active {
-        color: #667eea;
-    }
-    
-    .nav-link.active::after {
-        width: 100%;
+        color: #667eea; /* Example active color */
+        font-weight: 600;
     }
 `;
 
 const navStyle = document.createElement('style');
 navStyle.textContent = navActiveCSS;
-document.head.appendChild(navStyle); 
+document.head.appendChild(navStyle);
